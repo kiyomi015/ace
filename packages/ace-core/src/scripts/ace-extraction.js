@@ -148,8 +148,17 @@ ace.getHeadings = function() {
       const alt = img.getAttribute('alt') !== null ? img.getAttribute('alt') : img.getAttribute('aria-label');
       images.push(alt);
     });
+    // text of the elements named in aria-labelledby, which takes precedence over
+    // aria-label in the accessible name; ids that don't resolve or are empty are skipped
+    const labelledByParts = [];
+    (hx.getAttribute('aria-labelledby') || '').trim().split(/\s+/).forEach(function(id) {
+      const el = id ? document.getElementById(id) : null;
+      const text = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (text) labelledByParts.push(text);
+    });
     headings.push({
       html: hx.textContent,
+      labelledBy: labelledByParts.length ? labelledByParts.join(' ') : undefined,
       ariaLabel: hx.getAttribute('aria-label') || undefined,
       images: images.length ? images : undefined,
       level: level

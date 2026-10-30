@@ -14,22 +14,36 @@ const { localize, setCurrentLanguage } = require('./l10n/localize').localizer;
 
 const MAX_HEADING_TEXT = 150;
 
-// Text shown for one heading in the headings outline:
-// aria-label or text content, plus the alt text of any images, truncated and HTML-escaped.
-function headingOutlineText(hx) {
-  let text = (hx.ariaLabel || hx.html || '').replace(/\s+/g, ' ').trim();
+function collapseAndTruncate(str) {
+  let text = (str || '').replace(/\s+/g, ' ').trim();
   if (text.length > MAX_HEADING_TEXT) {
     text = text.substring(0, MAX_HEADING_TEXT).trim() + '…';
   }
+  return text;
+}
+
+// Text shown for one heading in the headings outline:
+// the visible text, then notes for the alt text of any images and for the label
+// that names the heading (aria-labelledby, else aria-label), truncated and HTML-escaped.
+function headingOutlineText(hx) {
+  const text = collapseAndTruncate(hx.html);
   let html = escape(text);
+  if (!html.length && !(hx.images && hx.images.length)) {
+    html = `<span class="toc-empty">${escape(localize("headingempty"))}</span>`;
+  }
   if (hx.images && hx.images.length) {
     const alts = hx.images.map((alt) => (alt && alt.trim())
       ? `"${escape(alt.trim())}"`
       : escape(localize("headingimagenoalt")));
     html += `${html.length ? ' ' : ''}<span class="toc-image">(${escape(localize("headingimage"))}: ${alts.join(', ')})</span>`;
   }
-  if (!html.length) {
-    html = `<span class="toc-empty">${escape(localize("headingempty"))}</span>`;
+  // aria-labelledby wins over aria-label, as in the accessible name;
+  // no note when the label is the same as the visible text
+  const label = hx.labelledBy
+    ? { attr: 'aria-labelledby', text: collapseAndTruncate(hx.labelledBy) }
+    : hx.ariaLabel ? { attr: 'aria-label', text: collapseAndTruncate(hx.ariaLabel) } : null;
+  if (label && label.text && label.text !== text) {
+    html += ` <span class="toc-label">(${label.attr}: "${escape(label.text)}")</span>`;
   }
   return html;
 }
