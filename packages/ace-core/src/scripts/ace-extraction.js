@@ -12,7 +12,7 @@ ace.createReport = function(report) {
     report.outlines = report.outlines || {};
     report.outlines.html = ace.getHTMLOutline();
     report.outlines.headings = ace.getHeadings();
-    report.data = report.data || {};  
+    report.data = report.data || {};
     const skipExpensive = !!window.__skipExpensiveContentExtractions__; // configured from host bootstrapper page (checker-chromium) can be undefined
     reportData('images', skipExpensive ? [] : ace.getImages());
     reportData('audios', skipExpensive ? [] : ace.getAudios());
@@ -141,8 +141,17 @@ ace.getHeadings = function() {
     let level = +hx.localName.slice(1);
     if (Number.isNaN(level)) level = +hx.getAttribute('aria-level');
     if (!Number.isInteger(level) || level < 1) level = 2; // NOTE aria-level fallback value per ARIA spec is 2 (and avoid Infinity)
+    // alt text of images inside the heading, so headings made of images are not blank in the outline
+    // null means the image has no alt attribute
+    const images = [];
+    hx.querySelectorAll('img, [role="img"]').forEach(function(img) {
+      const alt = img.getAttribute('alt') !== null ? img.getAttribute('alt') : img.getAttribute('aria-label');
+      images.push(alt);
+    });
     headings.push({
       html: hx.textContent,
+      ariaLabel: hx.getAttribute('aria-label') || undefined,
+      images: images.length ? images : undefined,
       level: level
     });
   });
